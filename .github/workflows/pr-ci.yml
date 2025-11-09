@@ -1,20 +1,19 @@
-name: Pull Request CI
+name: pr-ci
 
 on:
   pull_request:
-    branches: 
+    branches:
       - main
 
 jobs:
   build-and-test:
-
     runs-on: ubuntu-latest
-  
+
     permissions:
       contents: read
       pull-requests: read
       security-events: write
-      
+
     steps:
       - name: Clone repository
         uses: actions/checkout@v4
@@ -22,8 +21,8 @@ jobs:
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
-          distribution: 'temurin'
+          java-version: "21"
+          distribution: "temurin"
 
       - name: Add execution permission for gradlew
         working-directory: ./app
@@ -78,50 +77,35 @@ jobs:
 
       - name: Run Trivy vulnerability scanner (table format)
         uses: aquasecurity/trivy-action@master
-        id: trivy-table
         continue-on-error: true
         with:
-          image-ref: 'app:pr-${{ github.event.pull_request.number }}'
-          format: 'table'
-          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
-          exit-code: '0'
+          image-ref: "app:pr-${{ github.event.pull_request.number }}"
+          format: "table"
+          severity: "CRITICAL,HIGH,MEDIUM,LOW"
+          exit-code: "0"
 
-      - name: Run Trivy vulnerability scanner (SARIF for GitHub Security)
+      - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
-        id: trivy-sarif
         continue-on-error: true
         with:
-          image-ref: 'app:pr-${{ github.event.pull_request.number }}'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-          severity: 'CRITICAL,HIGH'
-          exit-code: '0'
-
-      - name: Show Trivy scan summary
-        run: |
-          echo "=== Trivy Scan Summary ==="
-          if [ -f trivy-results.sarif ]; then
-            echo "✅ SARIF report generated successfully"
-            echo "📊 Report file size: $(du -h trivy-results.sarif | cut -f1)"
-            echo "📋 Scanning image: app:pr-${{ github.event.pull_request.number }}"
-            echo "🔍 Severity levels: CRITICAL, HIGH"
-            echo ""
-            echo "Note: GitHub Security will show alerts in the Security tab → Code scanning alerts"
-            echo "If no alerts appear, it means no CRITICAL or HIGH vulnerabilities were found."
-          else
-            echo "⚠️ SARIF report file not found"
-          fi
+          image-ref: "app:pr-${{ github.event.pull_request.number }}"
+          format: "sarif"
+          output: "trivy-results.sarif"
+          severity: "CRITICAL,HIGH"
 
       - name: Upload Trivy results to GitHub Security
         if: always()
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: 'trivy-results.sarif'
-          wait-for-processing: true
+          sarif_file: "trivy-results.sarif"
+
+      - name: Trivy scan summary
+        run: |
+          echo "GitHub Security will show alerts in the Security tab → Code scanning alerts"
+          echo "If no alerts appear, it means no CRITICAL or HIGH vulnerabilities were found."
 
       - name: Cleanup
         if: always()
         run: |
           docker stop test-container || true
           docker rm test-container || true
-
