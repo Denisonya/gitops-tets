@@ -4,6 +4,8 @@
 # Usage: ./update_version.sh <version_type>
 # version_type: patch, minor, major, or none
 
+# TEST TEST TEST
+
 set -e
 
 VERSION_FILE="VERSION"
