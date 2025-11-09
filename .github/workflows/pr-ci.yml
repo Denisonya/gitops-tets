@@ -1,0 +1,97 @@
+name: pr-ci
+
+on:
+  pull_request:
+    branches: 
+      - main
+
+jobs:
+  build-and-test:
+
+    runs-on: ubuntu-latest
+  
+    permissions:
+      contents: read
+      pull-requests: read
+      security-events: write
+      
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Add execution permission for gradlew
+        working-directory: ./app
+        run: chmod +x gradlew
+
+      - name: Build application
+        working-directory: ./app
+        run: ./gradlew bootJar --no-daemon
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        working-directory: ./app
+        run: docker build -t app:pr-${{ github.event.pull_request.number }} .
+
+      - name: Start container
+        run: |
+          docker run -d -p 8080:8080 --name test-container app:pr-${{ github.event.pull_request.number }}
+          echo "Container started, waiting for healthcheck..."
+
+      - name: Wait for healthcheck
+        run: |
+          max_attempts=30
+          attempt=0
+          while [ $attempt -lt $max_attempts ]; do
+            if curl -f http://localhost:8080/healthz; then
+              echo "Healthcheck passed!"
+              exit 0
+            fi
+            echo "Waiting for healthcheck... (attempt $(( attempt+1 ))/$max_attempts)"
+            sleep 3
+            attempt=$(( attempt+1 ))
+          done
+          echo "Healthcheck failed after $max_attempts attempts"
+          echo "=== Container logs ==="
+          docker logs test-container
+          echo "======================"
+          exit 1
+
+      - name: Verify healthcheck endpoint
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/healthz)
+          if [ "$response" != "200" ]; then
+            echo "Healthcheck endpoint returned status $response, expected 200"
+            echo "=== Container logs ==="
+            docker logs test-container
+            echo "======================"
+            exit 1
+          fi
+          echo "Healthcheck endpoint verified: $response"
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'app:pr-${{ github.event.pull_request.number }}'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker stop test-container || true
+          docker rm test-container || true
+

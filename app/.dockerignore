@@ -1,0 +1,42 @@
+# Ignore Git and IDE files
+.git
+.gitignore
+.idea
+.vscode
+
+# Gradle / build
+.gradle
+build
+**/build
+
+# Keep pre-built jars if you intentionally copy them into the image
+!build/libs/
+!build/libs/*.jar
+
+# Gradle wrapper caches
+/.gradle
+
+# OS
+.DS_Store
+
+# Logs and env
+*.log
+.env
+
+# Node / Python artifacts
+node_modules
+dist
+target
+
+# Java artifacts you usually don't want in context (except jars kept above)
+*.class
+*.war
+*.ear
+
+# Docker files not needed in context
+**/*.tar
+
+# Misc
+*.swp
+*.swo
+Thumbs.db

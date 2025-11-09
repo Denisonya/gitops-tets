@@ -1,0 +1,12 @@
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
+}
+
+rootProject.name = "app"
+
+buildCache {
+    local {
+        isEnabled = true
+        directory = File(rootDir, "build-cache")
+    }
+}
