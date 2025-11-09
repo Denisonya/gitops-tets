@@ -4,7 +4,7 @@
 # Usage: ./update_version.sh <version_type>
 # version_type: patch, minor, major, or none
 
-# TESTING TESTING TESTING
+# TESTING TESTING
 
 set -e
 

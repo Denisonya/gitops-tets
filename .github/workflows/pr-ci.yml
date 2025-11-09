@@ -1,4 +1,4 @@
-name: pr-ci
+name: Pull Request CI
 
 on:
   pull_request:
