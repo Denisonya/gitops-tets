@@ -43,7 +43,7 @@ jobs:
             sleep 3
             attempt=$(( attempt+1 ))
           done
-          echo "Healthcheck failed after $max_attempts attempts"
+          echo "Healthcheck failed after $max_attempts attempts :("
           echo "=== Container logs ==="
           docker logs test-container
           echo "======================"
